@@ -1,3 +1,6 @@
+#![warn(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 mod argser;
 
 /// This will automatically implement the `argser::FromArgs` trait for the
