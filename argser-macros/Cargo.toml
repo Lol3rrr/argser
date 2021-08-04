@@ -2,6 +2,10 @@
 name = "argser-macros"
 version = "0.1.0"
 edition = "2018"
+authors = ["lol3rrr <lol3r@lol3r.net>"]
+license = "MIT"
+description = "Provides the Macros for the Argser-Crate"
+repository = "https://github.com/Lol3rrr/argser"
 
 [lib]
 proc-macro = true
