@@ -1,4 +1,4 @@
-use argser::argser;
+use argser::{argser, FromArgs};
 
 #[test]
 fn primitives() {
@@ -26,6 +26,19 @@ fn primitives() {
         Ok(expected),
         argser::parse_args_from_providers(&[&fixed_provider])
     );
+    let expected_args = vec![
+        argser::ArgumentDetail {
+            name: "name".to_owned(),
+            required: true,
+            description: "".to_owned(),
+        },
+        argser::ArgumentDetail {
+            name: "port".to_owned(),
+            required: true,
+            description: "".to_owned(),
+        },
+    ];
+    assert_eq!(expected_args, Options::arguments());
 }
 
 #[test]
@@ -72,6 +85,20 @@ fn primitives_with_default_func() {
         Ok(expected),
         argser::parse_args_from_providers(&[&fixed_provider])
     );
+
+    let expected_args = vec![
+        argser::ArgumentDetail {
+            name: "name".to_owned(),
+            required: true,
+            description: "".to_owned(),
+        },
+        argser::ArgumentDetail {
+            name: "port".to_owned(),
+            required: false,
+            description: "".to_owned(),
+        },
+    ];
+    assert_eq!(expected_args, Options::arguments());
 }
 
 #[test]
@@ -114,4 +141,18 @@ fn primitives_with_default() {
         Ok(expected),
         argser::parse_args_from_providers(&[&fixed_provider])
     );
+
+    let expected_args = vec![
+        argser::ArgumentDetail {
+            name: "name".to_owned(),
+            required: true,
+            description: "".to_owned(),
+        },
+        argser::ArgumentDetail {
+            name: "port".to_owned(),
+            required: false,
+            description: "".to_owned(),
+        },
+    ];
+    assert_eq!(expected_args, Options::arguments());
 }

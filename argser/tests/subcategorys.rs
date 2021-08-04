@@ -1,4 +1,4 @@
-use argser::argser;
+use argser::{argser, FromArgs};
 
 #[test]
 fn one_subcategory() {
@@ -33,4 +33,18 @@ fn one_subcategory() {
         Ok(expected),
         argser::parse_args_from_providers(&[&fixed_provider])
     );
+
+    let expected_args = vec![
+        argser::ArgumentDetail {
+            name: "name".to_owned(),
+            required: true,
+            description: "".to_owned(),
+        },
+        argser::ArgumentDetail {
+            name: "con.port".to_owned(),
+            required: true,
+            description: "".to_owned(),
+        },
+    ];
+    assert_eq!(expected_args, Options::arguments());
 }

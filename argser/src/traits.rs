@@ -2,6 +2,18 @@ use std::collections::HashMap;
 
 use crate::ParseError;
 
+/// Information regarding a single Argument
+#[derive(Debug, PartialEq)]
+pub struct ArgumentDetail {
+    /// The Name of the Argument
+    pub name: String,
+    /// Whether or not the Argument is required for parsing to finish, this is
+    /// false for all Arguments that can fallback to some Default
+    pub required: bool,
+    /// A Description for the Argument
+    pub description: String,
+}
+
 /// Defines the Interface to parse a Collection of provided Arguments into a
 /// single concrete Struct.
 ///
@@ -13,6 +25,9 @@ where
 {
     /// Parses the given Collection of Arguments into a valid instance of Self
     fn parse(args: HashMap<String, Vec<String>>) -> Result<Self, ParseError>;
+
+    /// Returns a List of all Arguments that are accepted by this
+    fn arguments() -> Vec<ArgumentDetail>;
 }
 
 /// Defines the interface to parse a List-Argument Values into single Conecrete

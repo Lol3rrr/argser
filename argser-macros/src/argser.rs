@@ -130,9 +130,7 @@ fn generate_parse_block(fields: &[ParseField]) -> TokenStream {
     result
 }
 
-fn impl_from_args(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
-    let name = &input.ident;
-
+fn impl_parse(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
     let parse_block = generate_parse_block(fields);
 
     let mut fields = quote! {};
@@ -144,14 +142,77 @@ fn impl_from_args(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream
     }
 
     quote! {
-        impl argser::FromArgs for #name {
-            fn parse(args: std::collections::HashMap<String, Vec<String>>) -> Result<Self, argser::ParseError> {
-                #parse_block
+        fn parse(args: std::collections::HashMap<String, Vec<String>>) -> Result<Self, argser::ParseError> {
+            #parse_block
 
-                Ok(Self {
-                    #fields
-                })
+            Ok(Self {
+                #fields
+            })
+        }
+    }
+}
+
+fn impl_arguments(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
+    let mut populate_block = quote! {};
+    for field in fields {
+        let name = &field.arg_name;
+
+        match &field.value {
+            FieldValue::Primitive => {
+                let required = match &field.default_func {
+                    DefaultValue::None => true,
+                    DefaultValue::Impl | DefaultValue::Func(_) => false,
+                };
+
+                populate_block.extend(quote! {
+                    args.push(argser::ArgumentDetail {
+                        name: #name.to_owned(),
+                        required: #required,
+                        description: "".to_owned(),
+                    });
+                });
             }
+            FieldValue::SubCategory => {
+                let ty = &field.ty;
+
+                populate_block.extend(quote! {
+                    {
+                        let raw = <#ty as argser::FromArgs>::arguments();
+                        let extend_iter = raw
+                            .into_iter()
+                            .map(|mut raw| {
+                                raw.name = format!("{}.{}", #name, raw.name);
+                                raw
+                            });
+                        args.extend(extend_iter);
+                    }
+                });
+            }
+        };
+    }
+
+    quote! {
+        fn arguments() -> Vec<argser::ArgumentDetail> {
+            let mut args = Vec::new();
+
+            #populate_block
+
+            args
+        }
+    }
+}
+
+fn impl_from_args(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
+    let name = &input.ident;
+
+    let parse_block = impl_parse(input, fields);
+    let arguments_block = impl_arguments(input, fields);
+
+    quote! {
+        impl argser::FromArgs for #name {
+            #parse_block
+
+            #arguments_block
         }
     }
 }
