@@ -17,10 +17,10 @@ impl Cli {
 
         let mut key: Option<String> = None;
         for item in iter {
-            if item.chars().nth(0).unwrap() == '-' {
+            if item.starts_with('-') {
                 let item = item.trim_start_matches('-');
 
-                match item.find("=") {
+                match item.find('=') {
                     Some(split_index) => {
                         let (first, second) = item.split_at(split_index);
                         result.push((first.to_owned(), second[1..].to_owned()));
@@ -29,13 +29,8 @@ impl Cli {
                         key = Some(item.to_owned());
                     }
                 };
-            } else {
-                match key.take() {
-                    Some(key_val) => {
-                        result.push((key_val, item));
-                    }
-                    None => {}
-                };
+            } else if let Some(key_val) = key.take() {
+                result.push((key_val, item));
             }
         }
 
@@ -47,6 +42,11 @@ impl ArgProvider for Cli {
         let vars = std::env::args();
 
         Self::parse_vars(vars)
+    }
+}
+impl Default for Cli {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

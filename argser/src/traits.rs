@@ -52,7 +52,7 @@ where
 
 impl ParseFromArgs for String {
     fn parse(mut value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
         Ok(value.remove(0))
@@ -60,7 +60,7 @@ impl ParseFromArgs for String {
 }
 impl ParseFromArgs for u64 {
     fn parse(mut value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
         match value.remove(0).parse() {
@@ -71,7 +71,7 @@ impl ParseFromArgs for u64 {
 }
 impl ParseFromArgs for u32 {
     fn parse(mut value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
         match value.remove(0).parse() {
@@ -82,7 +82,7 @@ impl ParseFromArgs for u32 {
 }
 impl ParseFromArgs for u16 {
     fn parse(mut value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
         match value.remove(0).parse() {
@@ -93,7 +93,7 @@ impl ParseFromArgs for u16 {
 }
 impl ParseFromArgs for u8 {
     fn parse(mut value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
         match value.remove(0).parse() {
@@ -117,7 +117,7 @@ where
     T: ParseFromArgs,
 {
     fn parse(value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
 
@@ -130,7 +130,7 @@ where
     T: ParseFromArgs,
 {
     fn parse(value: Vec<String>) -> Result<Self, ParseError> {
-        if value.len() < 1 {
+        if value.is_empty() {
             return Err(ParseError::MissingValue);
         }
 
