@@ -3,7 +3,7 @@ name: Release-Macros
 on:
   push:
     tags:
-      - 'macros-v*'
+      - 'argser-v*'
 
 jobs:
   publish:
@@ -18,13 +18,13 @@ jobs:
       run: |
         cargo login "$API_KEY"
     - name: Publish
-      run: cd argser-macros; cargo publish
+      run: cd argser; cargo publish
   create-release:
     runs-on: ubuntu-latest
     steps:
       - name: Create GitHub release
         uses: Roang-zero1/github-create-release-action@master
         with:
-          version_regex: ^macros-v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+
+          version_regex: ^argser-v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
