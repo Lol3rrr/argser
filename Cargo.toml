@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+	"argser",
+	"argser-macros",
+]
