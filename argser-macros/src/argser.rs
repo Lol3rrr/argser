@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::Type;
@@ -21,24 +19,12 @@ struct ParseField {
     value: FieldValue,
     default_func: DefaultValue,
 }
-impl Debug for ParseField {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "ParseField (ident: {}, type: {}, arg_name: {}, value: {:?})",
-            self.ident,
-            self.ty.to_token_stream(),
-            self.arg_name,
-            self.value
-        )
-    }
-}
 
 impl ParseField {
     pub fn parse(field: &syn::Field) -> ParseField {
         let ident = field.ident.as_ref().unwrap().clone();
         let mut arg_name = ident.to_string();
-        let ty = field.ty.clone();
+        let mut ty = field.ty.clone();
         let mut value = FieldValue::Primitive;
         let mut default_func = DefaultValue::None;
 
@@ -57,6 +43,21 @@ impl ParseField {
                 FieldAttribute::Default_ => {
                     default_func = DefaultValue::Impl;
                 }
+                FieldAttribute::Map { sub } => {
+                    let new_type: syn::Type =
+                        syn::parse2(quote! { std::collections::HashMap<String, #ty> }).unwrap();
+
+                    let sub_value = match sub {
+                        Some(s) => match s.to_string().as_ref() {
+                            "subcategory" => FieldValue::SubCategory,
+                            _ => FieldValue::Primitive,
+                        },
+                        _ => FieldValue::Primitive,
+                    };
+                    value = FieldValue::Map(Box::new(sub_value), ty.clone());
+
+                    ty = new_type;
+                }
             };
         }
 
@@ -71,7 +72,7 @@ impl ParseField {
 
     pub fn parse_block(&self) -> TokenStream {
         let mut name = self.arg_name.clone();
-        match self.value {
+        match &self.value {
             FieldValue::Primitive => {
                 let parse_fn = match &self.default_func {
                     DefaultValue::None => quote! { argser::ParseFromArgs::parse(value)? },
@@ -108,14 +109,95 @@ impl ParseField {
                     }
                 }
             }
+            FieldValue::Map(sub, _) => {
+                name.push('.');
+
+                let ty = &self.ty;
+
+                match sub.as_ref() {
+                    FieldValue::Primitive => {
+                        quote! {
+                            {
+                                let mut sub_category = std::collections::HashMap::<String, Vec<String>>::new();
+                                for (key, value) in args.iter() {
+                                    let n_key = match key.strip_prefix(#name) {
+                                        Some(k) => k,
+                                        None => continue,
+                                    };
+
+                                    sub_category.insert(n_key.to_owned(), value.to_owned());
+                                }
+
+                                let mut result = <#ty>::new();
+
+                                for (sub_name, sub_value) in sub_category {
+                                    match argser::ParseFromArgs::parse(sub_value) {
+                                        Ok(res) => {
+                                            result.insert(sub_name, res);
+                                        }
+                                        _ => continue,
+                                    };
+                                }
+
+                                result
+                            }
+                        }
+                    }
+                    FieldValue::SubCategory => {
+                        quote! {
+                            {
+                                let mut sub_category = std::collections::HashMap::<String, std::collections::HashMap<String, Vec<String>>>::new();
+                                for (key, value) in args.iter() {
+                                    let n_key = match key.strip_prefix(#name) {
+                                        Some(k) => k,
+                                        None => continue,
+                                    };
+
+                                    let (name, sub_key) = match n_key.find('.') {
+                                        Some(i) => (&n_key[..i], &n_key[(i+1)..]),
+                                        None => continue,
+                                    };
+
+
+                                    match sub_category.get_mut(name) {
+                                        Some(sub_value) => {
+                                            sub_value.insert(sub_key.to_owned(), value.to_owned());
+                                        }
+                                        None => {
+                                            let mut tmp = std::collections::HashMap::new();
+                                            tmp.insert(sub_key.to_owned(), value.to_owned());
+
+                                            sub_category.insert(name.to_owned(), tmp);
+                                        }
+                                    };
+                                }
+
+                                let mut result = <#ty>::new();
+
+                                for (sub_name, sub_value) in sub_category {
+                                    match argser::FromArgs::parse(sub_value) {
+                                        Ok(res) => {
+                                            result.insert(sub_name, res);
+                                        }
+                                        _ => continue,
+                                    };
+                                }
+
+                                result
+                            }
+                        }
+                    }
+                    _ => panic!(""),
+                }
+            }
         }
     }
 }
 
-#[derive(Debug)]
 enum FieldValue {
     Primitive,
     SubCategory,
+    Map(Box<FieldValue>, syn::Type),
 }
 
 fn generate_parse_block(fields: &[ParseField]) -> TokenStream {
@@ -152,7 +234,7 @@ fn impl_parse(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
     }
 }
 
-fn impl_arguments(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
+fn impl_arguments(_input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
     let mut populate_block = quote! {};
     for field in fields {
         let name = &field.arg_name;
@@ -188,6 +270,34 @@ fn impl_arguments(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream
                     }
                 });
             }
+            FieldValue::Map(sub, prev_type) => {
+                let block = match sub.as_ref() {
+                    FieldValue::Primitive => quote! {
+                        args.push(argser::ArgumentDetail {
+                            name: format!("{}.{}", #name, "{name}"),
+                            required: false,
+                            description: "".to_owned(),
+                        });
+                    },
+                    FieldValue::SubCategory => {
+                        let ty = prev_type;
+                        quote! {
+                            let raw = <#ty as argser::FromArgs>::arguments();
+                            let extend_iter = raw
+                                .into_iter()
+                                .map(|mut raw| {
+                                    raw.name = format!("{}.{}.{}", #name, "{name}", raw.name);
+                                    raw.required = false;
+                                    raw
+                                });
+                            args.extend(extend_iter);
+                        }
+                    }
+                    _ => quote! {},
+                };
+
+                populate_block.extend(block);
+            }
         };
     }
 
@@ -217,10 +327,19 @@ fn impl_from_args(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream
     }
 }
 
-fn clean_up_struct(input: &syn::ItemStruct) -> TokenStream {
+fn generate_struct(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStream {
     let mut inner = input.clone();
     for field in inner.fields.iter_mut() {
+        let name = field.ident.as_ref().unwrap();
+        let n_type = fields
+            .iter()
+            .find(|nf| nf.ident.eq(name))
+            .map(|nf| nf.ty.clone())
+            .unwrap();
+
         field.attrs = Vec::new();
+
+        field.ty = n_type;
     }
 
     inner.to_token_stream()
@@ -238,7 +357,7 @@ pub fn argser(_attributes: syn::AttributeArgs, input: syn::ItemStruct) -> TokenS
     let fields = parse_fields(&input);
 
     let impl_block = impl_from_args(&input, &fields);
-    let cleaned_up = clean_up_struct(&input);
+    let cleaned_up = generate_struct(&input, &fields);
 
     quote! {
         #cleaned_up

@@ -10,6 +10,8 @@ struct CLI {
     optional: Option<String>,
     #[argser(default_func(default_names))]
     names: Vec<String>,
+    #[argser(map)]
+    con_map: u16,
 }
 
 #[argser]

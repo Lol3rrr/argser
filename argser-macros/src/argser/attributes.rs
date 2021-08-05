@@ -22,6 +22,9 @@ pub enum FieldAttribute {
     },
     /// The Field should use the Types Default implementation as fallback
     Default_,
+    Map {
+        sub: Option<Ident>,
+    },
 }
 
 impl syn::parse::Parse for FieldAttribute {
@@ -50,6 +53,22 @@ impl syn::parse::Parse for FieldAttribute {
                 Ok(FieldAttribute::DefaultFunc { func: value })
             }
             "default" => Ok(FieldAttribute::Default_),
+            "map" => {
+                let lookahead = input.lookahead1();
+                let ty: Option<Ident> = if lookahead.peek(syn::token::Paren) {
+                    let content;
+                    parenthesized!(content in input);
+
+                    match content.parse() {
+                        Ok(t) => Some(t),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                };
+
+                Ok(FieldAttribute::Map { sub: ty })
+            }
             _ => Err(syn::Error::new(ident.span(), "Unknown Attribute")),
         }
     }
