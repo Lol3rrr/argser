@@ -1,6 +1,6 @@
 [package]
 name = "argser"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2018"
 authors = ["lol3rrr <lol3r@lol3r.net>"]
 license = "MIT"
@@ -10,4 +10,4 @@ repository = "https://github.com/Lol3rrr/argser"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-argser-macros = { path = "../argser-macros/", version = "0.2.1" }
+argser-macros = { path = "../argser-macros/", version = "0.2.2" }
