@@ -205,6 +205,7 @@ fn generate_parse_block(fields: &[ParseField]) -> TokenStream {
     for field in fields.iter() {
         let field_name = &field.ident;
         let parse_block = field.parse_block();
+
         result.extend(quote! {
             let #field_name = #parse_block;
         });
@@ -337,7 +338,22 @@ fn generate_struct(input: &syn::ItemStruct, fields: &[ParseField]) -> TokenStrea
             .map(|nf| nf.ty.clone())
             .unwrap();
 
-        field.attrs = Vec::new();
+        let new_fields: Vec<_> = field
+            .attrs
+            .iter()
+            .filter(|attr| {
+                let path = &attr.path;
+                let ident = match path.get_ident() {
+                    Some(i) => i,
+                    None => return false,
+                };
+
+                ident != "argser"
+            })
+            .map(|attr| attr.to_owned())
+            .collect();
+
+        field.attrs = new_fields;
 
         field.ty = n_type;
     }

@@ -2,10 +2,13 @@ use argser::{argser, FromArgs};
 
 #[test]
 fn primitives() {
+    /// Struct Docs
     #[argser]
     #[derive(Debug, PartialEq)]
     struct Options {
+        /// Name-Docs
         name: String,
+        /// Port-Docs
         port: u16,
     }
 
