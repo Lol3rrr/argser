@@ -1,6 +1,11 @@
 use crate::ArgProvider;
 
 /// This ArgProvider collects all the CLI-Arguments passed to the Program
+///
+/// # Accepts
+/// This Provider accepts all the CLI-Flags that are in one of these Formats:
+/// * "-{name} {value}"
+/// * "-{name}={value}"
 pub struct Cli {}
 
 impl Cli {
@@ -9,29 +14,41 @@ impl Cli {
         Self {}
     }
 
-    fn parse_vars<I>(iter: I) -> Vec<(String, String)>
+    fn parse_vars<I>(mut iter: I) -> Vec<(String, String)>
     where
         I: Iterator<Item = String>,
     {
         let mut result = Vec::new();
 
-        let mut key: Option<String> = None;
-        for item in iter {
-            if item.starts_with('-') {
-                let item = item.trim_start_matches('-');
+        loop {
+            let item = match iter.next() {
+                Some(i) => i,
+                None => break,
+            };
 
-                match item.find('=') {
-                    Some(split_index) => {
-                        let (first, second) = item.split_at(split_index);
-                        result.push((first.to_owned(), second[1..].to_owned()));
-                    }
-                    None => {
-                        key = Some(item.to_owned());
-                    }
-                };
-            } else if let Some(key_val) = key.take() {
-                result.push((key_val, item));
+            if !item.starts_with('-') {
+                continue;
             }
+
+            let item = item.trim_start_matches('-');
+
+            match item.split_once('=') {
+                Some((key, value)) => {
+                    result.push((key.to_string(), value.to_string()));
+                    continue;
+                }
+                None => {
+                    let key = item;
+
+                    let value = match iter.next() {
+                        Some(v) => v,
+                        None => break,
+                    };
+
+                    result.push((key.to_string(), value.to_string()));
+                    continue;
+                }
+            };
         }
 
         result
