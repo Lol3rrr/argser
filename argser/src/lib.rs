@@ -71,13 +71,14 @@ where
 }
 
 /// This is a simple Wrapper for [`parse_args_from_providers`] that
-/// automatically uses the [`Cli`](provider::Cli) ArgProvider to collect
-/// Arguments and then Parse them
+/// automatically uses the [`Cli`](provider::Cli) and [`Env`](provider::Env)
+/// ArgProvider to collect Arguments and then Parse them
 pub fn parse_cli<T>() -> Result<T, ParseError>
 where
     T: FromArgs,
 {
-    let cli = provider::Cli::new();
+    let cli = provider::Cli::default();
+    let env = provider::Env::default();
 
-    parse_args_from_providers(&[&cli])
+    parse_args_from_providers(&[&cli, &env])
 }
